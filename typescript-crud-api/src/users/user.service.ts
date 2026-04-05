@@ -23,20 +23,15 @@ async function getById(id: number): Promise<User> {
 async function create(
   params: UserCreationAttributes & { password: string }
 ): Promise<void> {
-  // Check if email already exists
   const existingUser = await db.User.findOne({ where: { email: params.email } });
   if (existingUser) {
     throw new Error(`Email "${params.email}" is already registered`);
   }
-
-  // Hash password
   const passwordHash = await bcrypt.hash(params.password, 10);
-
-  // Create user (exclude plain password from saved fields)
   await db.User.create({
     ...params,
     passwordHash,
-    role: params.role || Role.User, // Default to User role
+    role: params.role || Role.User,
   } as UserCreationAttributes);
 }
 
@@ -45,14 +40,10 @@ async function update(
   params: Partial<UserCreationAttributes> & { password?: string }
 ): Promise<void> {
   const user = await getUser(id);
-
-  // Hash new password if provided
   if (params.password) {
     params.passwordHash = await bcrypt.hash(params.password, 10);
-    delete params.password; // Remove plain password
+    delete params.password;
   }
-
-  // Update user
   await user.update(params as Partial<UserCreationAttributes>);
 }
 
@@ -61,7 +52,6 @@ async function _delete(id: number): Promise<void> {
   await user.destroy();
 }
 
-// Helper: Get user or throw error
 async function getUser(id: number): Promise<User> {
   const user = await db.User.scope('withHash').findByPk(id);
   if (!user) {
