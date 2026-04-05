@@ -1,102 +1,36 @@
-// src/users/user.model.ts
-import { DataTypes, Model, Optional } from 'sequelize';
+// src/_helpers/db.ts
+import config from '../../config.json';
+import mysql from 'mysql2/promise';
 import { Sequelize } from 'sequelize';
 
-// Define the attributes interface
-export interface UserAttributes {
-  id: number;
-  email: string;
-  passwordHash: string;
-  title: string;
-  firstName: string;
-  lastName: string;
-  role: string;
-  createdAt: Date;
-  updatedAt: Date;
+export interface Database {
+  User: any; // Will be properly typed after creating the model
 }
 
-// Define optional attributes for creation
-export interface UserCreationAttributes
-  extends Optional<UserAttributes, 'id' | 'createdAt' | 'updatedAt'> {}
+export const db: Database = {} as Database;
 
-// Define the Sequelize model class
-export class User
-  extends Model<UserAttributes, UserCreationAttributes>
-  implements UserAttributes
-{
-  public id!: number;
-  public email!: string;
-  public passwordHash!: string;
-  public title!: string;
-  public firstName!: string;
-  public lastName!: string;
-  public role!: string;
-  public readonly createdAt!: Date;
-  public readonly updatedAt!: Date;
+export async function initialize(): Promise<void> {
+  const { host, port, user, password, database } = config.database;
+
+  // Create database if it doesn't exist
+  const connection = await mysql.createConnection({ host, port, user, password });
+  await connection.query(`CREATE DATABASE IF NOT EXISTS \`${database}\`;`);
+  await connection.end();
+
+  // Connect to database with Sequelize
+  const sequelize = new Sequelize(database, user, password, {
+    host,
+    port,
+    dialect: 'mysql',
+    logging: false,
+  });
+
+  // Initialize models
+  const { default: userModel } = await import('../users/user.model');
+  db.User = userModel(sequelize);
+
+  // Sync models with database
+  await sequelize.sync({ alter: true });
+
+  console.log('✅ Database initialized and models synced');
 }
-
-// Export the model initializer function
-export function initUserModel(sequelize: Sequelize): typeof User {
-  User.init(
-    {
-      id: {
-        type: DataTypes.INTEGER,
-        autoIncrement: true,
-        primaryKey: true,
-      },
-      email: {
-        type: DataTypes.STRING,
-        allowNull: false,
-        unique: true,
-      },
-      passwordHash: {
-        type: DataTypes.STRING,
-        allowNull: false,
-      },
-      title: {
-        type: DataTypes.STRING,
-        allowNull: false,
-      },
-      firstName: {
-        type: DataTypes.STRING,
-        allowNull: false,
-      },
-      lastName: {
-        type: DataTypes.STRING,
-        allowNull: false,
-      },
-      role: {
-        type: DataTypes.STRING,
-        allowNull: false,
-      },
-      createdAt: {
-        type: DataTypes.DATE,
-        allowNull: false,
-        defaultValue: DataTypes.NOW,
-      },
-      updatedAt: {
-        type: DataTypes.DATE,
-        allowNull: false,
-        defaultValue: DataTypes.NOW,
-      },
-    },
-    {
-      sequelize,
-      modelName: 'User',
-      tableName: 'users',
-      timestamps: true,
-      defaultScope: {
-        attributes: { exclude: ['passwordHash'] },
-      },
-      scopes: {
-        withHash: {
-          attributes: { include: ['passwordHash'] },
-        },
-      },
-    }
-  );
-
-  return User;
-}
-
-export default initUserModel;
