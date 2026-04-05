@@ -28,7 +28,7 @@ initialize()
       console.log(`📬 Test with: POST /users with { email, password, ... }`);
     });
   })
-  .catch((err) => {
+  .catch((err: unknown) => {
     console.error('❌ Failed to initialize database:', err);
     process.exit(1);
   });

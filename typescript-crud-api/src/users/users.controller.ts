@@ -8,7 +8,7 @@ import { userService } from './user.service';
 
 const router = Router();
 
-// ✅ ROUTES
+// ✅ ROUTESw
 router.get('/', getAll);
 router.get('/:id', getById);
 router.post('/', createSchema, create);
